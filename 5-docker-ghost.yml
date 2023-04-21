@@ -1,0 +1,67 @@
+---
+- name: Installing and running ghost in
+  hosts: localhost
+  become: true
+  vars:
+    container_count: 1 # nbre de container
+    default_container_name: docker
+    default_container_image: ghost
+    default_container_command: sleep 1 # Commande par défaut à exécuter sur les nouveaux conteneurs.
+
+  tasks:
+    # - name: Install aptitude
+    #   ansible.builtin.apt:
+    #     name: aptitude
+    #     state: latest
+    #     update_cache: true
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: present
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+
+    # - name: Update apt and install docker-ce
+    #   ansible.builtin.apt:
+    #     name: docker-ce
+    #     state: latest
+    #     update_cache: true
+
+    - name: Install Docker Module for Python
+      ansible.builtin.pip:
+        name: docker
+# ghost
+    - name: Pull default Docker image
+      community.docker.docker_image:
+        name: "{{ default_container_image }}"
+        source: pull
+
+    - name: Create default containers
+      community.docker.docker_container:
+        name: "{{ default_container_name }}{{ item }}"
+        image: "{{ default_container_image }}"
+        command: "{{ default_container_command }}"
+        state: present
+      with_sequence: count={{ container_count }}
+      # est le moyen Ansible de créer une boucle, et dans ce cas,
+      # il bouclera la création de vos conteneurs en fonction du
+      # nombre que vous avez spécifié. Il s'agit d'une boucle de comptage de base, donc la itemvariable ici fournit
+      # un nombre représentant l'itération de la boucle actuelle.
+      # Ce numéro est utilisé ici pour nommer vos conteneurs.
